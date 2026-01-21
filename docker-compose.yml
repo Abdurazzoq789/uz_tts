@@ -1,0 +1,100 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: uzbek_tts_postgres
+    environment:
+      POSTGRES_DB: uzbek_tts
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uzbek_tts_network
+  
+  # Redis for Queue & Cache
+  redis:
+    image: redis:7-alpine
+    container_name: uzbek_tts_redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - uzbek_tts_network
+  
+  # Telegram Bot
+  bot:
+    build: .
+    container_name: uzbek_tts_bot
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${DB_PASSWORD:-postgres}@postgres:5432/uzbek_tts
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    restart: unless-stopped
+    networks:
+      - uzbek_tts_network
+  
+  # Celery Worker for TTS Processing
+  celery_worker:
+    build: .
+    container_name: uzbek_tts_celery
+    command: celery -A tasks worker --loglevel=info -Q tts
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:${DB_PASSWORD:-postgres}@postgres:5432/uzbek_tts
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    restart: unless-stopped
+    networks:
+      - uzbek_tts_network
+  
+  # Celery Beat for Scheduled Tasks
+  celery_beat:
+    build: .
+    container_name: uzbek_tts_beat
+    command: celery -A tasks beat --loglevel=info
+    depends_on:
+      - redis
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    restart: unless-stopped
+    networks:
+      - uzbek_tts_network
+
+volumes:
+  postgres_data:
+
+networks:
+  uzbek_tts_network:
+    driver: bridge

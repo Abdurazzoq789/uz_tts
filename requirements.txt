@@ -1,0 +1,16 @@
+asyncpg==0.30.0
+SQLAlchemy==2.0.36
+alembic==1.14.0
+celery==5.4.0
+redis==5.2.1
+psycopg2-binary==2.9.10
+aiogram==3.14.0
+pydantic==2.9.2
+pydantic-settings==2.6.1
+python-dotenv==1.0.1
+
+# Open-source TTS (Facebook MMS VITS)
+transformers==4.46.3
+torch==2.5.1
+scipy==1.14.1
+pydub==0.25.1
