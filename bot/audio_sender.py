@@ -43,7 +43,7 @@ async def send_audio(
             chat_id=chat_id,
             voice=audio_file,
             reply_to_message_id=reply_to_message_id,
-            caption=f"🎙️ {bot_username}"
+            caption=f"🎙️"
         )
         
         logger.info(f"Sent audio to chat {chat_id}, size: {len(audio_bytes)} bytes")
