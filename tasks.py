@@ -101,7 +101,7 @@ def process_tts_task(
                 await bot.send_voice(
                     chat_id=chat_id,
                     voice=audio_file,
-                    caption=f"🎙️ {bot_username}"
+                    caption=f"🎙️"
                 )
                 
                 logger.info(f"Sent audio to chat {chat_id}")
